@@ -23,8 +23,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install gcc-aarch64-linux-gnu
     - name: Download and extract TF-A release
+      # curl -L https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git/snapshot/trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
       run: |
-        curl -L https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git/snapshot/trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
+        curl -L https://github.com/ARM-software/arm-trusted-firmware/archive/refs/tags/${{steps.set_version.outputs.version}}.tar.gz -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
         tar -xzf trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
     - name: Build TF-A
       run: |
