@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
     - name: Set version
       id: set_version
       run: echo "version=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
@@ -34,7 +34,7 @@ jobs:
         make PLAT=rpi4 RPI3_PRELOADED_DTB_BASE=0x1F0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
         make PLAT=rpi5 RPI3_PRELOADED_DTB_BASE=0x3E0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
     - name: Upload TF-A artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v6
       with:
         name: TF-A ${{steps.set_version.outputs.version}} Artifacts
         path: |
@@ -45,10 +45,7 @@ jobs:
     - name: Display SHA-256
       run: sha256sum trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
     - name: Create release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{secrets.TOKEN}}
+      uses: softprops/action-gh-release@v2
       with:
         body: Raspberry Pi Arm Trusted Firmware ${{steps.set_version.outputs.version}}
         files: |
@@ -56,3 +53,4 @@ jobs:
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
+        token: ${{ secrets.TOEKN }}
