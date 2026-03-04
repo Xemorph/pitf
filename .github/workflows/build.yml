@@ -32,6 +32,7 @@ jobs:
         export CROSS_COMPILE=/usr/bin/aarch64-linux-gnu-
         make PLAT=rpi3 RPI3_PRELOADED_DTB_BASE=0x10000 PRELOADED_BL33_BASE=0x30000 SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 fip all
         make PLAT=rpi4 RPI3_PRELOADED_DTB_BASE=0x1F0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
+        make PLAT=rpi5 RPI3_PRELOADED_DTB_BASE=0x3E0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
     - name: Upload TF-A artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -40,8 +41,9 @@ jobs:
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
+          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
     - name: Display SHA-256
-      run: sha256sum trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
+      run: sha256sum trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
     - name: Create release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
@@ -53,3 +55,4 @@ jobs:
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin
           trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
+          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
