@@ -17,41 +17,76 @@ jobs:
       uses: actions/checkout@v6
     - name: Set version
       id: set_version
-      run: echo "version=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+      run: |
+        VERSION=$(git describe --tags --abbrev=0)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Detected tag: $VERSION"
+    
     - name: Set up Linux environment
       run: |
         sudo apt-get update
-        sudo apt-get install gcc-aarch64-linux-gnu
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+    
     - name: Download and extract TF-A release
-      # curl -L https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git/snapshot/trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
+      id: download_tfa
       run: |
-        curl -L https://github.com/ARM-software/arm-trusted-firmware/archive/refs/tags/${{steps.set_version.outputs.version}}.tar.gz -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
+        URL="https://github.com/ARM-software/arm-trusted-firmware/archive/refs/tags/${{steps.set_version.outputs.version}}.tar.gz"
+        echo "Downloading TF-A from $URL"
+
+        if ! curl --head --fail "$URL" >/dev/null 2>&1; then
+          echo "Error: TF-A release $URL not found"
+          exit 1
+        fi
+        curl -L "$URL" -o trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
         tar -xzf trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz
+        
+        EXTRACTED_DIR=$(tar -tzf trusted-firmware-a-${{steps.set_version.outputs.version}}.tar.gz | head -1 | cut -f1 -d"/")
+        echo "extracted_dir=$EXTRACTED_DIR" >> $GITHUB_OUTPUT
+    
     - name: Build TF-A
       run: |
-        cd trusted-firmware-a-${{steps.set_version.outputs.version}}
+        cd ${{steps.download_tfa.outputs.extracted_dir}}
         export CROSS_COMPILE=/usr/bin/aarch64-linux-gnu-
+
         make PLAT=rpi3 RPI3_PRELOADED_DTB_BASE=0x10000 PRELOADED_BL33_BASE=0x30000 SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 fip all
+
         make PLAT=rpi4 RPI3_PRELOADED_DTB_BASE=0x1F0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
+
         make PLAT=rpi5 RPI3_PRELOADED_DTB_BASE=0x3E0000 PRELOADED_BL33_BASE=0x20000 SUPPORT_VFP=1 SMC_PCI_SUPPORT=1 DEBUG=0 all
+    
+    - name: Verify TF-A artifacts exist
+      run: |
+        cd ${{steps.download_tfa.outputs.extracted_dir}}
+        FILES="build/rpi3/release/bl1.bin build/rpi3/release/fip.bin build/rpi4/release/bl31.bin build/rpi5/release/bl31.bin"
+        for f in $FILES; do
+          if [ ! -f "$f" ]; then
+            echo "Error: Expected file $f not found"
+            exit 1
+          fi
+        done
+  
+    - name: Display SHA-256 checksums
+      run: |
+        cd ${{steps.download_tfa.outputs.extracted_dir}}
+        sha256sum build/rpi3/release/bl1.bin build/rpi3/release/fip.bin build/rpi4/release/bl31.bin build/rpi5/release/bl31.bin
+    
     - name: Upload TF-A artifacts
       uses: actions/upload-artifact@v6
       with:
         name: TF-A ${{steps.set_version.outputs.version}} Artifacts
         path: |
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
-    - name: Display SHA-256
-      run: sha256sum trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
-    - name: Create release
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/bl1.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/fip.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi4/release/bl31.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi5/release/bl31.bin
+    - name: Create Github release
+      if: ${{ !env.ACT }}
       uses: softprops/action-gh-release@v2
       with:
         body: Raspberry Pi Arm Trusted Firmware ${{steps.set_version.outputs.version}}
         files: |
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/bl1.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi3/release/fip.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi4/release/bl31.bin
-          trusted-firmware-a-${{steps.set_version.outputs.version}}/build/rpi5/release/bl31.bin
-        token: ${{ secrets.TOEKN }}
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/bl1.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/fip.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi4/release/bl31.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi5/release/bl31.bin
+        token: ${{ secrets.TOKEN }}
