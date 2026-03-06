@@ -70,23 +70,36 @@ jobs:
         cd ${{steps.download_tfa.outputs.extracted_dir}}
         sha256sum build/rpi3/release/bl1.bin build/rpi3/release/fip.bin build/rpi4/release/bl31.bin build/rpi5/release/bl31.bin
     
-    - name: Upload TF-A artifacts
+    - name: Create tar.xz archives for Raspberry Pi platforms
+      run: |
+        cd ${{steps.download_tfa.outputs.extracted_dir}}
+        
+        # rpi3
+        tar -cJf rpi3-tf-a.tar.xz -C build/rpi3/release bl1.bin fip.bin
+        # rpi4
+        tar -cJf rpi4-tf-a.tar.xz -C build/rpi4/release bl31.bin
+        # rpi5
+        tar -cJf rpi5-tf-a.tar.xz -C build/rpi5/release bl31.bin
+        
+        # Liste erstellen
+        ls -lh *.tar.xz
+
+    - name: Upload TF-A artifacts as tar.xz
       uses: actions/upload-artifact@v6
       with:
         name: TF-A ${{steps.set_version.outputs.version}} Artifacts
         path: |
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/bl1.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/fip.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi4/release/bl31.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi5/release/bl31.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi3-tf-a.tar.xz
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi4-tf-a.tar.xz
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi5-tf-a.tar.xz
+    
     - name: Create Github release
       if: ${{ !env.ACT }}
       uses: softprops/action-gh-release@v2
       with:
         body: Raspberry Pi Arm Trusted Firmware ${{steps.set_version.outputs.version}}
         files: |
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/bl1.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi3/release/fip.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi4/release/bl31.bin
-          ${{steps.download_tfa.outputs.extracted_dir}}/build/rpi5/release/bl31.bin
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi3-tf-a.tar.xz
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi4-tf-a.tar.xz
+          ${{steps.download_tfa.outputs.extracted_dir}}/rpi5-tf-a.tar.xz
         token: ${{ secrets.TOKEN }}
